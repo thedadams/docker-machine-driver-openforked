@@ -357,7 +357,6 @@ func (d *Driver) GetCreateFlags() []mcnflag.Flag {
 
 func NewDriver(hostName, storePath string) drivers.Driver {
 	return NewDerivedDriver(hostName, storePath)
-
 }
 
 func NewDerivedDriver(hostName, storePath string) *Driver {
@@ -371,23 +370,19 @@ func NewDerivedDriver(hostName, storePath string) *Driver {
 			StorePath:   storePath,
 		},
 	}
-
 }
 
 func (d *Driver) GetSSHHostname() (string, error) {
 	return d.GetIP()
-
 }
 
 func (d *Driver) SetClient(client Client) {
 	d.client = client
-
 }
 
 // DriverName returns the name of the driver
 func (d *Driver) DriverName() string {
 	return "openforked"
-
 }
 
 func (d *Driver) SetConfigFromFlags(flags drivers.DriverOptions) error {
@@ -442,57 +437,44 @@ func (d *Driver) SetConfigFromFlags(flags drivers.DriverOptions) error {
 		userData, err := ioutil.ReadFile(flags.String("openforked-user-data-file"))
 		if err == nil {
 			d.UserData = userData
-
 		} else {
 			return err
-
 		}
-
 	}
 
 	d.SetSwarmConfigFromFlags(flags)
-
 	return d.checkConfig()
-
 }
 
 func (d *Driver) GetURL() (string, error) {
 	if err := drivers.MustBeRunning(d); err != nil {
 		return "", err
-
 	}
 
 	ip, err := d.GetIP()
 	if err != nil {
 		return "", err
-
 	}
 	if ip == "" {
 		return "", nil
-
 	}
 
 	return fmt.Sprintf("tcp://%s", net.JoinHostPort(ip, "2376")), nil
-
 }
 
 func (d *Driver) GetIP() (string, error) {
 	if d.IPAddress != "" {
 		return d.IPAddress, nil
-
 	}
 
 	log.Debug("Looking for the IP address...", map[string]string{"MachineId": d.MachineId})
-
 	if err := d.initCompute(); err != nil {
 		return "", err
-
 	}
 
 	addressType := Fixed
 	if d.FloatingIpPool != "" {
 		addressType = Floating
-
 	}
 
 	// Looking for the IP address in a retry loop to deal with OpenStack latency
@@ -500,33 +482,28 @@ func (d *Driver) GetIP() (string, error) {
 		addresses, err := d.client.GetInstanceIPAddresses(d)
 		if err != nil {
 			return "", err
-
 		}
 		for _, a := range addresses {
 			if a.AddressType == addressType && a.Version == d.IpVersion {
 				return a.Address, nil
-
 			}
-
 		}
+
 		time.Sleep(2 * time.Second)
-
 	}
-	return "", fmt.Errorf("no IP found for the machine")
 
+	return "", fmt.Errorf("no IP found for the machine")
 }
 
 func (d *Driver) GetState() (state.State, error) {
 	log.Debug("Get status for OpenStack instance...", map[string]string{"MachineId": d.MachineId})
 	if err := d.initCompute(); err != nil {
 		return state.None, err
-
 	}
 
 	s, err := d.client.GetInstanceState(d)
 	if err != nil {
 		return state.None, err
-
 	}
 
 	log.Debug("State for OpenStack instance", map[string]string{
@@ -547,76 +524,57 @@ func (d *Driver) GetState() (state.State, error) {
 		return state.Starting, nil
 	case "ERROR":
 		return state.Error, nil
-
 	}
 	return state.None, nil
-
 }
 
 func (d *Driver) failedToCreate(err error) error {
 	if e := d.Remove(); e != nil {
 		return fmt.Errorf("%v: %v", err, e)
-
 	}
 	return err
-
 }
 
 func (d *Driver) Create() error {
 	if err := d.resolveIds(); err != nil {
 		return err
-
 	}
 	if d.KeyPairName != "" {
 		if err := d.loadSSHKey(); err != nil {
 			return err
-
 		}
-
 	} else {
 		d.KeyPairName = fmt.Sprintf("%s-%s", d.MachineName, mcnutils.GenerateRandomID())
 		if err := d.createSSHKey(); err != nil {
 			return err
-
 		}
-
 	}
 	if d.BootFromVolume == false && d.VolumeSize > 0 {
 		if err := d.volumeCreate(); err != nil {
 			return err
-
 		}
-
 	}
 	if err := d.createMachine(); err != nil {
 		return err
-
 	}
 	if err := d.waitForInstanceActive(); err != nil {
 		return d.failedToCreate(err)
-
 	}
 	if d.BootFromVolume == false && d.VolumeId != "" {
 		if err := d.waitForVolumeAvailable(); err != nil {
 			return err
-
 		}
 		if err := d.volumeAttach(); err != nil {
 			return err
-
 		}
-
 	}
 	if d.FloatingIpPool != "" {
 		if err := d.assignFloatingIP(); err != nil {
 			return d.failedToCreate(err)
-
 		}
-
 	}
 	if err := d.lookForIPAddress(); err != nil {
 		return d.failedToCreate(err)
-
 	}
 	return nil
 
@@ -625,36 +583,29 @@ func (d *Driver) Create() error {
 func (d *Driver) Start() error {
 	if err := d.initCompute(); err != nil {
 		return err
-
 	}
 
 	return d.client.StartInstance(d)
-
 }
 
 func (d *Driver) Stop() error {
 	if err := d.initCompute(); err != nil {
 		return err
-
 	}
 
 	return d.client.StopInstance(d)
-
 }
 
 func (d *Driver) Restart() error {
 	if err := d.initCompute(); err != nil {
 		return err
-
 	}
 
 	return d.client.RestartInstance(d)
-
 }
 
 func (d *Driver) Kill() error {
 	return d.Stop()
-
 }
 
 func (d *Driver) Remove() error {
@@ -663,57 +614,46 @@ func (d *Driver) Remove() error {
 
 	if err := d.resolveIds(); err != nil {
 		return err
-
 	}
 
 	if d.FloatingIpPool != "" && d.IPAddress != "" && !d.ComputeNetwork {
 		floatingIP, err := d.client.GetFloatingIP(d, d.IPAddress)
 		if err != nil {
 			return err
-
 		}
 
 		if floatingIP != nil {
 			log.Debug("Deleting Floating IP: ", map[string]string{"floatingIP": floatingIP.Ip})
 			if err := d.client.DeleteFloatingIP(d, floatingIP); err != nil {
 				return err
-
 			}
-
 		}
-
 	}
 
 	if err := d.initCompute(); err != nil {
 		return err
-
 	}
+
 	if err := d.client.DeleteInstance(d); err != nil {
 		if gopherErr, ok := err.(*gophercloud.ErrUnexpectedResponseCode); ok {
 			if gopherErr.Actual == http.StatusNotFound {
 				log.Warn("Remote instance does not exist, proceeding with removing local reference")
-
 			} else {
 				return err
-
 			}
-
 		} else {
 			return err
-
 		}
-
 	}
+
 	if !d.ExistingKey {
 		log.Debug("deleting key pair...", map[string]string{"Name": d.KeyPairName})
 		if err := d.client.DeleteKeyPair(d, d.KeyPairName); err != nil {
 			return err
-
 		}
-
 	}
-	return nil
 
+	return nil
 }
 
 func (d *Driver) parseAuthConfig() (*gophercloud.AuthOptions, error) {
@@ -740,66 +680,57 @@ func (d *Driver) parseAuthConfig() (*gophercloud.AuthOptions, error) {
 			},
 		},
 	)
-
 }
 
 func (d *Driver) checkConfig() error {
 	if _, err := d.parseAuthConfig(); err != nil {
 		return err
-
 	}
 
 	if d.FlavorName == "" && d.FlavorId == "" {
 		return fmt.Errorf(errorMandatoryOption, "Flavor name or Flavor id", "--openstack-flavor-name or --openstack-flavor-id")
-
 	}
+
 	if d.FlavorName != "" && d.FlavorId != "" {
 		return fmt.Errorf(errorExclusiveOptions, "Flavor name", "Flavor id")
-
 	}
 
 	if d.ImageName == "" && d.ImageId == "" {
 		return fmt.Errorf(errorMandatoryOption, "Image name or Image id", "--openstack-image-name or --openstack-image-id")
-
 	}
+
 	if d.ImageName != "" && d.ImageId != "" {
 		return fmt.Errorf(errorExclusiveOptions, "Image name", "Image id")
-
 	}
 
 	if len(d.NetworkNames)*len(d.NetworkIds) > 0 {
 		return fmt.Errorf(errorExclusiveOptions, "Network names", "Network ids")
-
 	}
+
 	if d.EndpointType != "" && (d.EndpointType != "publicURL" && d.EndpointType != "adminURL" && d.EndpointType != "internalURL") {
 		return fmt.Errorf(errorWrongEndpointType)
-
 	}
+
 	if (d.KeyPairName != "" && d.PrivateKeyFile == "") || (d.KeyPairName == "" && d.PrivateKeyFile != "") {
 		return fmt.Errorf(errorBothOptions, "KeyPairName", "PrivateKeyFile")
-
 	}
-	return nil
 
+	return nil
 }
 
 func (d *Driver) resolveIds() error {
 	if len(d.NetworkNames) > 0 && !d.ComputeNetwork {
 		if err := d.initNetwork(); err != nil {
 			return err
-
 		}
 
 		networkIDs, err := d.client.GetNetworkIDs(d)
-
 		if err != nil {
 			return err
-
 		}
 
 		if len(networkIDs) == 0 {
 			return fmt.Errorf(errorUnknownNetworkName, d.NetworkNames)
-
 		}
 
 		d.NetworkIds = append(d.NetworkIds, networkIDs...)
@@ -807,24 +738,19 @@ func (d *Driver) resolveIds() error {
 			"Name": d.NetworkNames,
 			"ID":   d.NetworkIds,
 		})
-
 	}
 
 	if d.FlavorName != "" {
 		if err := d.initCompute(); err != nil {
 			return err
-
 		}
 		flavorID, err := d.client.GetFlavorID(d)
-
 		if err != nil {
 			return err
-
 		}
 
 		if flavorID == "" {
 			return fmt.Errorf(errorUnknownFlavorName, d.FlavorName)
-
 		}
 
 		d.FlavorId = flavorID
@@ -832,24 +758,19 @@ func (d *Driver) resolveIds() error {
 			"Name": d.FlavorName,
 			"ID":   d.FlavorId,
 		})
-
 	}
 
 	if d.ImageName != "" {
 		if err := d.initCompute(); err != nil {
 			return err
-
 		}
 		imageID, err := d.client.GetImageID(d)
-
 		if err != nil {
 			return err
-
 		}
 
 		if imageID == "" {
 			return fmt.Errorf(errorUnknownImageName, d.ImageName)
-
 		}
 
 		d.ImageId = imageID
@@ -857,15 +778,14 @@ func (d *Driver) resolveIds() error {
 			"Name": d.ImageName,
 			"ID":   d.ImageId,
 		})
-
 	}
 
 	if d.ServerGroupName != "" {
 		if err := d.initCompute(); err != nil {
 			return err
 		}
-		serverGroupId, err := d.client.GetServerGroupID(d)
 
+		serverGroupId, err := d.client.GetServerGroupID(d)
 		if err != nil {
 			return err
 		}
@@ -884,18 +804,15 @@ func (d *Driver) resolveIds() error {
 	if d.FloatingIpPool != "" && !d.ComputeNetwork {
 		if err := d.initNetwork(); err != nil {
 			return err
-
 		}
-		f, err := d.client.GetFloatingIPPoolIDs(d)
 
+		f, err := d.client.GetFloatingIPPoolIDs(d)
 		if err != nil {
 			return err
-
 		}
 
 		if len(f) == 0 {
 			return fmt.Errorf(errorUnknownNetworkName, d.FloatingIpPool)
-
 		}
 
 		d.FloatingIpPoolId = f[0]
@@ -903,80 +820,57 @@ func (d *Driver) resolveIds() error {
 			"Name": d.FloatingIpPool,
 			"ID":   d.FloatingIpPoolId,
 		})
-
 	}
 
 	return nil
-
 }
 
 func (d *Driver) initCompute() error {
 	if err := d.client.Authenticate(d); err != nil {
 		return err
-
 	}
-	if err := d.client.InitComputeClient(d); err != nil {
-		return err
 
-	}
-	return nil
-
+	return d.client.InitComputeClient(d)
 }
 
 func (d *Driver) initNetwork() error {
 	if err := d.client.Authenticate(d); err != nil {
 		return err
-
 	}
-	if err := d.client.InitNetworkClient(d); err != nil {
-		return err
 
-	}
-	return nil
-
+	return d.client.InitNetworkClient(d)
 }
 
 func (d *Driver) initBlockStorage() error {
 	if err := d.client.Authenticate(d); err != nil {
 		return err
-
 	}
-	if err := d.client.InitBlockStorageClient(d); err != nil {
-		return err
 
-	}
-	return nil
-
+	return d.client.InitBlockStorageClient(d)
 }
 
 func (d *Driver) loadSSHKey() error {
 	log.Debug("Loading Key Pair", d.KeyPairName)
 	if err := d.initCompute(); err != nil {
 		return err
-
 	}
+
 	log.Debug("Loading Private Key from", d.PrivateKeyFile)
 	privateKey, err := ioutil.ReadFile(d.PrivateKeyFile)
 	if err != nil {
 		return err
-
 	}
+
 	publicKey, err := d.client.GetPublicKey(d.KeyPairName)
 	if err != nil {
 		return err
-
 	}
-	if err := ioutil.WriteFile(d.privateSSHKeyPath(), privateKey, 0600); err != nil {
+
+	if err = ioutil.WriteFile(d.privateSSHKeyPath(), privateKey, 0600); err != nil {
 		return err
-
-	}
-	if err := ioutil.WriteFile(d.publicSSHKeyPath(), publicKey, 0600); err != nil {
-		return err
-
 	}
 
-	return nil
-
+	return ioutil.WriteFile(d.publicSSHKeyPath(), publicKey, 0600)
 }
 
 func (d *Driver) createSSHKey() error {
@@ -984,24 +878,18 @@ func (d *Driver) createSSHKey() error {
 	log.Debug("Creating Key Pair...", map[string]string{"Name": d.KeyPairName})
 	if err := ssh.GenerateSSHKey(d.GetSSHKeyPath()); err != nil {
 		return err
-
 	}
+
 	publicKey, err := ioutil.ReadFile(d.publicSSHKeyPath())
 	if err != nil {
 		return err
-
 	}
 
-	if err := d.initCompute(); err != nil {
+	if err = d.initCompute(); err != nil {
 		return err
-
 	}
-	if err := d.client.CreateKeyPair(d, d.KeyPairName, string(publicKey)); err != nil {
-		return err
 
-	}
-	return nil
-
+	return d.client.CreateKeyPair(d, d.KeyPairName, string(publicKey))
 }
 
 func (d *Driver) createMachine() error {
@@ -1012,32 +900,28 @@ func (d *Driver) createMachine() error {
 
 	if err := d.initCompute(); err != nil {
 		return err
-
 	}
 
 	if d.requiresBlockStorage() {
 		if err := d.initBlockStorage(); err != nil {
 			return err
-
 		}
-
 	}
 
 	instanceID, err := d.client.CreateInstance(d)
 	if err != nil {
 		return err
-
 	}
+
 	d.MachineId = instanceID
 	return nil
-
 }
 
 func (d *Driver) volumeCreate() error {
 	if d.VolumeName == "" {
 		d.VolumeName = "rancher-machine-volume"
-
 	}
+
 	log.Debug("Creating OpenStack Volume ...", map[string]string{
 		"VolumeName": d.VolumeName,
 		"VolumeType": d.VolumeType,
@@ -1046,32 +930,27 @@ func (d *Driver) volumeCreate() error {
 
 	if err := d.initBlockStorage(); err != nil {
 		return err
-
 	}
+
 	volumeId, err := d.client.VolumeCreate(d)
 	if err != nil {
 		return err
-
 	}
+
 	d.VolumeId = volumeId
 	return nil
-
 }
 
 func (d *Driver) waitForVolumeAvailable() error {
 	log.Debug("Waiting for the OpenStack volume to be available...", map[string]string{
 		"VolumeId": d.VolumeId,
 	})
+
 	if err := d.initBlockStorage(); err != nil {
 		return err
-
 	}
-	if err := d.client.WaitForVolumeStatus(d, "available"); err != nil {
-		return err
 
-	}
-	return nil
-
+	return d.client.WaitForVolumeStatus(d, "available")
 }
 
 func (d *Driver) volumeAttach() error {
@@ -1079,18 +958,18 @@ func (d *Driver) volumeAttach() error {
 		"VolumeId":         d.VolumeId,
 		"VolumeDevicePath": d.VolumeDevicePath,
 	})
+
 	if err := d.initCompute(); err != nil {
 		return err
-
 	}
+
 	VolumeDevicePath, err := d.client.VolumeAttach(d)
 	if err != nil {
 		return err
-
 	}
+
 	d.VolumeDevicePath = VolumeDevicePath
 	return nil
-
 }
 
 func (d *Driver) assignFloatingIP() error {
@@ -1098,72 +977,57 @@ func (d *Driver) assignFloatingIP() error {
 
 	if d.ComputeNetwork {
 		err = d.initCompute()
-
 	} else {
 		err = d.initNetwork()
-
 	}
-
 	if err != nil {
 		return err
-
 	}
 
 	floatingIP := &FloatingIP{}
 	log.Debug("Allocating a new floating IP...", map[string]string{"MachineId": d.MachineId})
-
-	if err := d.client.AssignFloatingIP(d, floatingIP); err != nil {
+	if err = d.client.AssignFloatingIP(d, floatingIP); err != nil {
 		return err
-
 	}
+
 	d.IPAddress = floatingIP.Ip
 	return nil
-
 }
 
 func (d *Driver) waitForInstanceActive() error {
 	log.Debug("Waiting for the OpenStack instance to be ACTIVE...", map[string]string{"MachineId": d.MachineId})
-	if err := d.client.WaitForInstanceStatus(d, "ACTIVE"); err != nil {
-		return err
-
-	}
-	return nil
-
+	return d.client.WaitForInstanceStatus(d, "ACTIVE")
 }
 
 func (d *Driver) lookForIPAddress() error {
 	ip, err := d.GetIP()
 	if err != nil {
 		return err
-
 	}
+
 	d.IPAddress = ip
 	log.Debug("IP address found", map[string]string{
 		"IP":        ip,
 		"MachineId": d.MachineId,
 	})
-	return nil
 
+	return nil
 }
 
 func (d *Driver) privateSSHKeyPath() string {
 	return d.GetSSHKeyPath()
-
 }
 
 func (d *Driver) publicSSHKeyPath() string {
 	return d.GetSSHKeyPath() + ".pub"
-
 }
 
 // openstack deployments may not have cinder available
 // check to see if it's required before initializing
 func (d *Driver) requiresBlockStorage() bool {
 	return d.VolumeName != "" || d.VolumeId != "" || d.VolumeType != "" || d.BootFromVolume || d.VolumeSize > 0 || d.VolumeDevicePath != ""
-
 }
 
 func sanitizeKeyPairName(s *string) {
 	*s = strings.Replace(*s, ".", "_", -1)
-
 }

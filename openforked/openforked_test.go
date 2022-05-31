@@ -28,5 +28,4 @@ func TestSetConfigFromFlags(t *testing.T) {
 	if len(checkFlags.InvalidFlags) != 0 {
 		t.Fatalf("invalid flags %v", checkFlags.InvalidFlags)
 	}
-
 }
